@@ -1,0 +1,243 @@
+import React, { useState, useEffect } from "react";
+import { View, StyleSheet, SectionList, RefreshControl } from "react-native";
+import { Images } from "../../Theme/Images/index";
+import CustomHeader from "../../Components/CustomHeader";
+import BillerCard from "../../Components/BillerCard";
+import moment from "moment";
+import { useSelector, useDispatch } from "react-redux";
+import CustomAlert from "../../Components/Alert";
+import Custom_Receipt from "../../Components/Receipt";
+import { myLog } from "../../Constant/Log";
+import { globalStyling } from "../../Constant/Global/Styling";
+import { hp, wp } from "../../Constant/Global/Function";
+import { setLoaderState } from "../../Redux/Loader";
+import { getTokenCall, Service } from "../../Service";
+import { catchError, serviceResponse } from "../../Constant";
+import CustomText from "../../Components/CustomText";
+import { colors } from "../../Constant/Colors";
+import { fontFamily, fontSize } from "../../Constant/Fonts";
+import { setSessionObject } from "../../Redux/SessionObject";
+
+export default function Notification(props) {
+  const [notifications, setNotifications] = useState([]);
+  const [originalData, setOriginalData] = useState([]);
+  const [searchedNotifications, setSearchedNotifications] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const loaderObject = useSelector((state) => state.loaderState.value);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    return props.navigation.addListener("focus", () => {
+      getNotifications();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isRefreshing) {
+      getNotifications(isRefreshing);
+    }
+  }, [isRefreshing]);
+
+  const getNotifications = async (refreshing) => {
+    try {
+      setNotifications([]);
+      setSearchedNotifications([]);
+      refreshing ? null : dispatch(setLoaderState({ state: true }));
+      const response = await getTokenCall(Service.fetchNotifications);
+      myLog.response(response.data);
+      myLog.response(
+        "response.data?.data?.notifications : ",
+        response.data?.data?.notifications
+      );
+
+      if (response.data.responseCode === "00") {
+        dispatch(
+          setSessionObject({
+            notificationCount: 0,
+          })
+        );
+        if (
+          response.data?.data?.notifications &&
+          response.data?.data?.notifications instanceof Array &&
+          response.data?.data?.notifications?.length > 0
+        ) {
+          let tempObject = {};
+          let newArray = [];
+
+          response.data?.data?.notifications?.map((item, index) => {
+            let date = moment(
+              response.data?.data?.notifications[index].creationDate
+            ).format("DD MMM YY");
+            if (tempObject[date]) {
+              tempObject[date].push(item);
+              let index = newArray.findIndex((item) => item.section === date);
+              newArray[index].data.push({ ...item });
+            } else {
+              tempObject[date] = [{ ...item }];
+              newArray.push({ section: date, data: [{ ...item }] });
+            }
+          });
+          myLog.debug("newarray : ", JSON.stringify(newArray));
+          setOriginalData(response.data?.data?.notifications);
+          setNotifications(newArray);
+        }
+
+        setIsRefreshing(false);
+        dispatch(setLoaderState({ state: false }));
+      } else {
+        setIsRefreshing(false);
+        dispatch(serviceResponse(response.data, props.navigation));
+      }
+    } catch (error) {
+      setIsRefreshing(false);
+      dispatch(catchError(error));
+    }
+  };
+
+  const renderCardList = ({ item, index }) => {
+    const newItem = {
+      ...item,
+      biller: item?.notificationTypeId?.title,
+      amountStatement: item?.notificationTypeId?.template,
+    };
+    delete newItem.status;
+    return (
+      <View
+        key={index}
+        style={{
+          marginVertical: wp(2),
+        }}
+      >
+        <BillerCard item={newItem} />
+      </View>
+    );
+  };
+
+  const notificationCardSectionlist = () => {
+    return (
+      <View style={style.listView}>
+        <SectionList
+          showsVerticalScrollIndicator={false}
+          renderItem={renderCardList}
+          sections={notifications}
+          removeClippedSubviews={true}
+          keyExtractor={(item, index) => index.toString()}
+          disableVirtualization={false}
+          contentContainerStyle={{
+            flexGrow: notifications.length <= 0 ? 1 : 0,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => {
+                setIsRefreshing(true);
+              }}
+            />
+          }
+          ListEmptyComponent={
+            <View
+              style={[
+                style.listView,
+                {
+                  justifyContent: "center",
+                },
+              ]}
+            >
+              {notifications.length <= 0 ? (
+                <View style={[style.listView, { justifyContent: "center" }]}>
+                  {loaderObject.state || isRefreshing ? null : (
+                    <CustomText
+                      style={{
+                        textAlign: "center",
+                        fontSize: fontSize.large,
+                        fontFamily: fontFamily["Lato-Light"],
+                      }}
+                    >
+                      No Notifications
+                    </CustomText>
+                  )}
+                </View>
+              ) : null}
+            </View>
+          }
+          renderSectionHeader={({ section: { section } }) => {
+            return (
+              <View
+                style={{
+                  alignSelf: "center",
+                  marginTop: wp(3),
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderRadius: wp(2),
+                  backgroundColor: colors.greyBackground2,
+                  padding: wp(2),
+                  width: wp(25),
+                }}
+              >
+                <CustomText
+                  style={{
+                    color: colors.blackColor,
+                    borderRadius: wp(2),
+                    fontFamily: fontFamily["Poppins-Medium"],
+                    fontSize: fontSize.smallest,
+                  }}
+                >
+                  {moment(section, "DD MMM YY").isSame(new Date(), "day")
+                    ? "Today"
+                    : section}
+                </CustomText>
+              </View>
+            );
+          }}
+        />
+      </View>
+    );
+  };
+
+  return (
+    <View style={globalStyling.container}>
+      <CustomHeader
+        navigation={props.navigation}
+        stepLabel={true}
+        // title={''}
+      />
+      {notificationCardSectionlist()}
+    </View>
+  );
+}
+
+const style = StyleSheet.create({
+  tabBar_container: {
+    height: hp(5),
+    width: wp(80),
+    marginTop: hp(5),
+    borderRadius: wp(6),
+    justifyContent: "center",
+    backgroundColor: colors.silverShade,
+    alignSelf: "center",
+    marginBottom: wp(2),
+  },
+  txt: {
+    color: colors.blackColor,
+    fontFamily: fontFamily["Poppins-Medium"],
+    fontSize: fontSize.smallest,
+  },
+
+  active_container: {
+    height: hp(3),
+    width: wp(35),
+    borderRadius: wp(6),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deactived_container: {
+    height: hp(3),
+    width: wp(35),
+    borderRadius: wp(6),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  listView: {
+    flex: 0.9,
+  },
+});
