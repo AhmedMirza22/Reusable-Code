@@ -1,0 +1,299 @@
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  FlatList,
+  TouchableWithoutFeedback,
+  TextInput,
+  Image,
+  Button,
+  TouchableOpacity,
+} from "react-native";
+import { Images } from "../../Theme/Images/index";
+import CustomHeader from "../../Components/CustomHeader";
+import CustomText from "../../Components/CustomText";
+import { setAppObject } from "../../Redux/AppObject";
+import { useSelector, useDispatch } from "react-redux";
+import { myLog } from "../../Constant/Log";
+import { globalStyling } from "../../Constant/Global/Styling";
+import { wp } from "../../Constant/Global/Function";
+import { searchData } from "../../../../TestData";
+import { colors } from "../../Constant/Colors";
+import { Fragment } from "react";
+import Feather from "react-native-vector-icons/Feather";
+import { fontFamily, fontSize } from "../../Constant/Fonts";
+import _ from "lodash";
+import ShadowBox from "../../Components/ShadowBox";
+import CustomButton from "../../Components/CustomButton";
+
+const GeneralSearch = (props) => {
+  const [searchText, setSearchText] = useState("");
+  const searchDataObject = searchData(searchText != "");
+  myLog.debug("Search Data Object", searchDataObject);
+  const [searchableFilterArray, setSearchableFilterArray] = useState(
+    Object.keys(searchDataObject.flows).map((i) => ({
+      data: searchDataObject.flows[i].data,
+      screenName: searchDataObject.flows[i].screenName,
+    }))
+  );
+  const ref = useRef();
+
+  const dispatch = useDispatch();
+
+  const keychainObject = useSelector(
+    (state) => state?.appObject?.value?.keychainObject
+  );
+  myLog.debug(
+    keychainObject?.billers.map((i) => i.subCategory?.categoryName),
+    "Billers.................................................Billers"
+  );
+
+  const [categories, setCategories] = useState([]);
+  const [stateObject, setStateObject] = useState({});
+
+  useEffect(() => {
+    return props.navigation.addListener("focus", () => {
+      let keyValues = {},
+        keyArray = [],
+        newObject = {};
+      keychainObject?.billers.map((item) => {
+        if (item.category) {
+          if (keyValues[item.category]) {
+            keyValues[item.category] = keyValues[item.category] + 1;
+            newObject[item.category].push(item);
+          } else {
+            keyValues[item.category] = 1;
+            keyArray.push({ key: item.category, ...item });
+            newObject[item.category] = [{ ...item }];
+          }
+        } else {
+          if (keyValues[item.categoryName]) {
+            keyValues[item.categoryName] = keyValues[item.categoryName] + 1;
+            newObject[item.categoryName].push(item);
+          } else {
+            keyValues[item.categoryName] = 1;
+            keyArray.push({ key: item.categoryName, ...item });
+            newObject[item.categoryName] = [{ ...item }];
+          }
+        }
+      });
+      myLog.debug("keyArray--------- : ", keyArray, "keyArray---------");
+      myLog.debug("newObject-------- : ", newObject);
+      setCategories(Object.keys(newObject));
+      setStateObject(newObject);
+    });
+  }, []);
+
+  const filterSearchableArrayAgainstSearchText = (textToSearch) => {
+    const tempData = Object.keys(searchDataObject.flows).map((i) => ({
+      data: _.intersection(
+        searchDataObject.flows[i].data,
+        _.filter(
+          searchDataObject.flows[i].data,
+          (i) =>
+            (i
+              ? i.toLowerCase().includes(textToSearch.toLowerCase())
+              : false) ||
+            (i
+              ? i
+                  .split("")
+                  .map((char, i) =>
+                    i === 0
+                      ? char
+                      : char.match(/^[A-Z]+$/g) !== null
+                      ? char
+                      : ""
+                  )
+                  .join("")
+                  .toUpperCase()
+                  .includes(textToSearch.toUpperCase())
+              : false)
+        )
+      ),
+      screenName: searchDataObject.flows[i].screenName,
+    }));
+
+    setSearchableFilterArray(tempData);
+  };
+
+  const searchOnPress = (item, screenName) => () => {
+    myLog.debug("screenName:-----", screenName);
+    myLog.debug("Item - screenName:-----", item.screenName);
+
+    // myLog.debug("Item:-----", item);
+    switch (screenName) {
+      case "BillerViewer":
+        let subcategoriesData = keychainObject.subCategoryImages.filter(
+          (item1) =>
+            item1.billCategoryName ===
+            keychainObject.subCategoryImages.filter(
+              (item2) => item2.subCategoryName === item[0]
+            )[0].billCategoryName
+        );
+        {
+          props.navigation.navigate(screenName, {
+            data: subcategoriesData,
+          });
+          break;
+        }
+      case "BillPayment": {
+        props.navigation.navigate(screenName, {
+          data: Object.keys(stateObject)
+            .map((i) => _.filter(stateObject[i], { companyName: item }))
+            .filter((i) => i.length > 0)[0],
+        });
+        break;
+      }
+      default: {
+        props.navigation.navigate(screenName);
+        break;
+      }
+    }
+  };
+
+  const RenderSearchedItems = ({ item, index }) => {
+    return item.data.map((i) => (
+      <View
+        key={Math.random()}
+        style={{
+          marginVertical: wp(2),
+          alignItems: "center",
+        }}
+      >
+        <ShadowBox>
+          <TouchableWithoutFeedback
+            onPress={
+              item.screenName === "Help"
+                ? () => dispatch(setAppObject({ contactAlert: true }))
+                : searchOnPress(
+                    item.screenName === "BillerViewer" ? item.data : i,
+                    item.screenName
+                  )
+            }
+          >
+            <View
+              style={{
+                height: wp(13),
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <TouchableWithoutFeedback
+                onPress={
+                  item.screenName === "Help"
+                    ? () => dispatch(setAppObject({ contactAlert: true }))
+                    : searchOnPress(
+                        item.screenName === "BillerViewer" ? item.data : i,
+                        item.screenName
+                      )
+                }
+              >
+                <CustomText
+                  style={{ fontSize: fontSize.small, color: colors.blackColor }}
+                >
+                  {i}
+                </CustomText>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </ShadowBox>
+      </View>
+    ));
+  };
+
+  const searchField = () => {
+    return (
+      <Fragment>
+        <View
+          style={{
+            flex: 0.05,
+            backgroundColor: colors.whiteColor,
+            flexDirection: "row",
+            alignSelf: "center",
+            borderRadius: wp(7),
+            marginTop: wp(5),
+            width: wp(90),
+            height: wp(10),
+            flexDirection: "row",
+            alignItems: "center",
+            shadowColor: colors.blackColor,
+            shadowOffset: {
+              width: 0,
+              height: 2,
+            },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+
+            elevation: 5,
+          }}
+        >
+          <Feather
+            name="search"
+            color={colors.themeColor}
+            size={wp(6)}
+            style={{ marginLeft: wp(5) }}
+          />
+          <TextInput
+            value={searchText}
+            onChangeText={(text) => {
+              setSearchText(text);
+              filterSearchableArrayAgainstSearchText(text);
+            }}
+            placeholder={"Search"}
+            style={{
+              width: "75%",
+              height: wp(12),
+              fontSize: fontSize.small,
+              fontFamily: fontFamily["Lato-Regular"],
+              marginLeft: wp(3),
+              color: colors.greyShade,
+            }}
+          />
+          {searchText != "" ? (
+            <TouchableWithoutFeedback
+              onPress={() => {
+                setSearchText("");
+                filterSearchableArrayAgainstSearchText("");
+              }}
+            >
+              <Image
+                source={Images.cross}
+                style={{ height: wp(3), width: wp(3) }}
+              />
+            </TouchableWithoutFeedback>
+          ) : null}
+        </View>
+      </Fragment>
+    );
+  };
+
+  return (
+    <View style={globalStyling.container}>
+      <CustomHeader
+        searchRef={ref}
+        navigation={props.navigation}
+        inputField={true}
+        value={searchText}
+        onChangeText={(text) => {
+          myLog.log("search text1 : ", text);
+          setSearchText(text);
+          filterSearchableArrayAgainstSearchText(text);
+        }}
+      />
+      {/* {searchField()} */}
+      <View style={globalStyling.screenView}>
+        {searchDataObject && (
+          <FlatList
+            showsVerticalScrollIndicator={false}
+            renderItem={RenderSearchedItems}
+            data={searchableFilterArray}
+            removeClippedSubviews={true}
+            keyExtractor={(item, index) => index.toString()}
+            disableVirtualization={false}
+          />
+        )}
+      </View>
+    </View>
+  );
+};
+
+export default GeneralSearch;
