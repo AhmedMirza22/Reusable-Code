@@ -1,0 +1,394 @@
+export const postTokenCall = async (service, body, header, token) => {
+  if (sslBuild_Enviornment) {
+    myLog.debug("SSL PINNING===>>>>>>>>>>");
+
+    myLog.debug(
+      "Service:",
+      service,
+      "Body: ",
+      body,
+      "Header: ",
+      JSON.stringify(header)
+    );
+    Keyboard.dismiss();
+
+    const newHeader =
+      header && typeof header === "object"
+        ? {
+            "X-Auth-Token": token
+              ? token
+              : store.getState().sessionObject.value.token,
+            ...header,
+            ...clientSecrets,
+          }
+        : {
+            "X-Auth-Token": token
+              ? token
+              : store.getState().sessionObject.value.token,
+            ...clientSecrets,
+          };
+
+    // const stringHeader = toString(newHeader);
+    // const stringbody = toString(body);
+
+    myLog.request(service, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : JSON.stringify(body),
+      pkPinning: true,
+      sslPinning: {
+        certs: sslCertificates,
+      },
+      headers: newHeader,
+    });
+
+    try {
+      return fetch(service, {
+        method: "POST",
+        body: body ? JSON.stringify(body) : JSON.stringify(body),
+        pkPinning: true,
+        sslPinning: {
+          certs: sslCertificates,
+        },
+        headers: newHeader,
+        // ? JSON.stringify(newHeader)
+      }).then((response) => {
+        myLog.debug("Response==>>postTokenCall", response.bodyString);
+        let res = {};
+        res["data"] = JSON.parse(response.bodyString);
+        return res;
+      });
+    } catch (error) {
+      myLog.debug(error, "SSL ERROR");
+      // dispatch(catchError(error));
+    }
+  } else {
+    Keyboard.dismiss();
+    const headerObject =
+      header && typeof header === "object"
+        ? {
+            "X-Auth-Token": token
+              ? token
+              : store.getState().sessionObject.value.token,
+            ...header,
+            ...clientSecrets,
+          }
+        : {
+            "X-Auth-Token": token
+              ? token
+              : store.getState().sessionObject.value.token,
+            ...clientSecrets,
+          };
+    myLog.request(`
+    ${service},${body ? JSON.stringify(body) : `{}`},{
+        headers: ${JSON.stringify(headerObject)},
+    }
+    `);
+    // 15000);
+    return axios.post(service, body ? body : {}, {
+      headers: headerObject,
+    });
+  }
+};
+
+// export const postNoTokenCall = async (service, body, header) => {
+//   Keyboard.dismiss();
+//   myLog.debug("Service:", service, "Body: ", body, "Header: ", header);
+
+//   const newHeader = { ...header, ...clientSecrets };
+//   newHeader && typeof newHeader === "object"
+//     ? myLog.request(service, body ? body : {}, {
+//         headers: newHeader,
+//       })
+//     : myLog.request(service, body ? body : {});
+
+//   return newHeader && typeof newHeader === "object"
+//     ? axios
+//         .post(service, body ? body : {}, {
+//           headers: newHeader,
+//         })
+//         .then((response) => {
+//           return response.data;
+//         })
+//     : axios.post(service, body ? body : {}).then((response) => {
+//         return response.data;
+//       });
+// };
+
+export const postNoTokenCall = async (service, body, header) => {
+  if (sslBuild_Enviornment) {
+    myLog.debug("SSL PINNING===>>>>>>>>>>");
+
+    myLog.debug(
+      "Service:",
+      service,
+      "Body: ",
+      body,
+      "Header: ",
+      JSON.stringify(header)
+    );
+    Keyboard.dismiss();
+
+    const newHeader = { ...header, ...clientSecrets };
+    let rawRes = null;
+    newHeader && typeof newHeader === "object"
+      ? myLog.request(service, body ? body : {}, {
+          headers: newHeader,
+        })
+      : myLog.request(service, body ? body : {});
+
+    // const stringHeader = toString(newHeader);
+    // const stringbody = toString(body);
+
+    return newHeader && typeof newHeader === "object"
+      ? fetch(service, {
+          method: "POST",
+          body: body ? JSON.stringify(body) : JSON.stringify(body),
+          pkPinning: true,
+          sslPinning: {
+            certs: sslCertificates,
+          },
+          headers: newHeader,
+        }).then((response) => {
+          myLog.debug("Response==>>postNoTokenCall", response.bodyString);
+          return JSON.parse(response.bodyString);
+        })
+      : fetch(service, {
+          method: "POST",
+          body: body ? JSON.stringify(body) : JSON.stringify(body),
+          pkPinning: true,
+          sslPinning: {
+            certs: sslCertificates,
+          },
+        }).then((response) => {
+          return JSON.parse(response.bodyString);
+        });
+  } else {
+    Keyboard.dismiss();
+    myLog.debug("Service:", service, "Body: ", body, "Header: ", header);
+
+    const newHeader = { ...header, ...clientSecrets };
+    newHeader && typeof newHeader === "object"
+      ? myLog.request(service, body ? body : {}, {
+          headers: newHeader,
+        })
+      : myLog.request(service, body ? body : {});
+
+    return newHeader && typeof newHeader === "object"
+      ? axios
+          .post(service, body ? body : {}, {
+            headers: newHeader,
+          })
+          .then((response) => {
+            return response.data;
+          })
+      : axios.post(service, body ? body : {}).then((response) => {
+          return response.data;
+        });
+  }
+};
+
+export const getTokenCall = async (service, queryString, header) => {
+  if (sslBuild_Enviornment) {
+    myLog.debug("SSL PINNING===>>>>>>>>>>");
+    Keyboard.dismiss();
+
+    const headerObject =
+      header && typeof header === "object"
+        ? {
+            "X-Auth-Token": store.getState().sessionObject.value.token,
+            ...header,
+            ...clientSecrets,
+          }
+        : {
+            "X-Auth-Token": store.getState().sessionObject.value.token,
+            ...clientSecrets,
+          };
+    myLog.request(`\n GET REQUEST\n
+          ${`${service}${queryString ? `?${queryString}` : ""}`},{
+              headers: ${JSON.stringify(headerObject)},
+          }
+          `);
+
+    return fetch(service, {
+      method: "GET",
+      pkPinning: true,
+      sslPinning: {
+        certs: sslCertificates,
+      },
+      headers: headerObject,
+    }).then((response) => {
+      myLog.debug(
+        "Response==>>getFetchTokenCall",
+        JSON.parse(response.bodyString),
+        "Response==>>getFetchTokenCall"
+      );
+      let res = {};
+      res["data"] = JSON.parse(response.bodyString);
+      return res;
+    });
+  } else {
+    Keyboard.dismiss();
+    const headerObject =
+      header && typeof header === "object"
+        ? {
+            "X-Auth-Token": store.getState().sessionObject.value.token,
+            ...header,
+            ...clientSecrets,
+          }
+        : {
+            "X-Auth-Token": store.getState().sessionObject.value.token,
+            ...clientSecrets,
+          };
+    myLog.request(`\n GET REQUEST\n
+        ${`${service}${queryString ? `?${queryString}` : ""}`},{
+            headers: ${JSON.stringify(headerObject)},
+        }
+        `);
+    return axios.get(`${service}${queryString ? `?${queryString}` : ""}`, {
+      headers: headerObject,
+    });
+  }
+};
+
+export const getTokenSlashCall = (service, queryString) => {
+  Keyboard.dismiss();
+
+  myLog.request(`\n GET REQUEST\n
+        ${`${service}${queryString ? `/${queryString}` : ""}`},{
+            headers: {'X-Auth-Token': ${
+              store.getState().reducers.token
+            },${clientSecrets}},
+        }
+        `);
+  return axios.get(`${service}${queryString ? `/${queryString}` : ""}`, {
+    headers: {
+      "X-Auth-Token": store.getState().reducers.token,
+      ...clientSecrets,
+    },
+  });
+};
+
+export const getNoTokenCall = async (service, queryString) => {
+  if (sslBuild_Enviornment) {
+    Keyboard.dismiss();
+
+    return fetch(service, {
+      method: "GET",
+      pkPinning: true,
+      sslPinning: {
+        certs: sslCertificates,
+      },
+    }).then((response) => {
+      myLog.debug(
+        "Response==>>getFetchTokenCall",
+        JSON.parse(response.bodyString),
+        "Response==>>getFetchTokenCall"
+      );
+      let res = {};
+      res["data"] = JSON.parse(response.bodyString);
+      return res;
+    });
+  } else {
+    Keyboard.dismiss();
+
+    myLog.request(
+      `\n${service}${queryString ? `?${queryString}` : ""}`,
+      isOneLinkEnvironment
+        ? {
+            headers: {
+              ...clientSecrets,
+            },
+          }
+        : {}
+    );
+    return axios.get(
+      `${service}${queryString ? `?${queryString}` : ""}`,
+      isOneLinkEnvironment
+        ? {
+            headers: {
+              ...clientSecrets,
+            },
+          }
+        : {}
+    );
+  }
+};
+
+export const getNoTokenQueryCall = (service, queryString) => {
+  Keyboard.dismiss();
+
+  myLog.request(
+    `
+        ${service}/${queryString}
+        `,
+    isOneLinkEnvironment
+      ? {
+          headers: {
+            ...clientSecrets,
+          },
+        }
+      : {}
+  );
+  return axios.get(
+    `${service}/${queryString}`,
+    isOneLinkEnvironment
+      ? {
+          headers: {
+            ...clientSecrets,
+          },
+        }
+      : {}
+  );
+};
+
+export const getNoTokenAllCalls = async (services) => {
+  if (sslBuild_Enviornment) {
+    Keyboard.dismiss();
+
+    const promises = services.map((service) => {
+      return fetch(service, {
+        method: "GET",
+        pkPinning: true,
+        sslPinning: {
+          certs: sslCertificates,
+        },
+      }).then((response) => {
+        let res = {};
+        res["data"] = JSON.parse(response.bodyString);
+        return res;
+      });
+    });
+
+    const responses = await Promise.all(promises);
+
+    return responses;
+  } else {
+    Keyboard.dismiss();
+
+    myLog.request(JSON.stringify(services));
+    return axios.all(services);
+  }
+};
+
+export const getFetchCall = async (service, queryString) => {
+  myLog.debug("SSL PINNING===>>>>>>>>>>");
+  Keyboard.dismiss();
+  // myLog.request(`${service}${queryString ? `?${queryString}` : ""}`, {
+  //   method: "GET",
+  //   pkPinning: true,
+  //   sslPinning: {
+  //     certs: sslCertificates,
+  //   },
+  // });
+
+  const rawRes = await fetch(service, {
+    method: "GET",
+    pkPinning: true,
+    sslPinning: {
+      certs: sslCertificates,
+    },
+  });
+
+  const data = await rawRes.json();
+  myLog.debug("SSL PINNING", data, "===========SSL PINNING DATA============");
+};
