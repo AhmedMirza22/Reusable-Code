@@ -1,0 +1,72 @@
+const showLocationAlert = () => {
+  Alert.alert(
+    "Location Access Required",
+    "Please turn on location this App needs to Access your location",
+    [
+      {
+        text: "Turn On",
+        onPress: () => {
+          Linking.openSettings();
+        },
+      },
+    ],
+    { cancelable: false }
+  );
+};
+
+export const geoLocation = async (notOptional, updateStates) => {
+  myLog.debug("Into Service GeoLocation Fucntion....");
+  if (appInfo.isIos) {
+    try {
+      await Geolocation.requestAuthorization("whenInUse")
+        .then(async (response) => {
+          myLog.debug("locresponse ", response);
+
+          const location = await subscribeLocationLocation(updateStates);
+          myLog.debug("If Case..........", location);
+          updateStates(location);
+        })
+        .catch((error) => {
+          notOptional === true ? showLocationAlert() : null;
+
+          myLog.debug("error loc ios", error);
+        });
+    } catch (error) {
+      myLog.debug("exceiption error9 : ", error);
+    }
+  } else {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        myLog.debug("Try Case..........")
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        //To Check, If Permission is granted
+        const location = await subscribeLocationLocation(updateStates);
+        myLog.debug("If Case..........", location);
+        updateStates(location);
+      } else {
+        myLog.debug("Else Case..........");
+        notOptional === true ? showLocationAlert() : null;
+      }
+    } catch (err) {
+      myLog.debug("error getting current location ", err);
+      myLog.debug("Error Case..........");
+    }
+  }
+};
+
+function subscribeLocationLocation(updateStates) {
+  return new Promise((resolve, reject) => {
+    Geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        resolve({ latitude, longitude });
+      },
+      (error) => {
+        reject(error);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+    );
+  });
+}
