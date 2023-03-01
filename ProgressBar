@@ -1,0 +1,136 @@
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+// import { color } from "react-native-reanimated";
+import { colors } from "../../Constant/Colors";
+// import { fontSize, fontWeight } from "../../Constant/Fonts";
+import { wp } from "../../Constant/Global/Function";
+import CustomText from "../CustomText";
+
+const NUM_STEPS = 4;
+
+const ProgressBar = (props) => {
+const [activeStep, setActiveStep] = useState(1);
+
+useEffect(() => {
+setActiveStep(props.step);
+}, []);
+
+const handlePress = (step) => {
+setActiveStep(step);
+};
+
+const renderSteps = () => {
+let steps = [];
+
+for (let i = 1; i <= NUM_STEPS; i++) {
+steps.push(
+<View
+key={i}
+style={[
+styles.step,
+{
+backgroundColor:
+i === activeStep ? colors.themeColor : colors.themeColor,
+zIndex:1
+},
+]}
+onPress={() => handlePress()}
+>
+<Text style={styles.stepText}>{i}</Text>
+</View>
+);
+}
+
+return steps;
+};
+
+return (
+<View style={styles.container}>
+<View style={styles.stepContainer}>{renderSteps()}</View>
+<View
+style={{
+flexDirection: "row",
+width: "100%",
+justifyContent: "space-evenly",
+marginLeft: wp(8),
+}}
+>
+<View style={{ flexDirection: "column" }}>
+<CustomText style={{ width: wp(20) }}>Application</CustomText>
+<CustomText style={{ width: wp(20) }}>Confirmed</CustomText>
+</View>
+<View style={{ flexDirection: "column" }}>
+<CustomText style={{ width: wp(20) }}>Validation</CustomText>
+<CustomText style={{ width: wp(20), marginLeft: wp(-1) }}>
+Completed
+</CustomText>
+</View>
+<View style={{ flexDirection: "column" }}>
+<CustomText style={{ width: wp(20) }}> Bank</CustomText>
+<CustomText style={{ width: wp(20), marginLeft: wp(-2) }}>
+Approved
+</CustomText>
+</View>
+<View style={{ flexDirection: "column" }}>
+<CustomText style={{ width: wp(20) }}>Account</CustomText>
+<CustomText style={{ width: wp(20), marginLeft: wp(-3) }}>
+Activated
+</CustomText>
+</View>
+</View>
+
+<View style={[styles.progressBar,{bottom:wp(26.3)}]}>
+<View
+style={[
+styles.progressBarActive,
+{ width: `${(activeStep / NUM_STEPS) * 95}%` },
+]}
+/>
+</View>
+</View>
+);
+};
+
+const styles = StyleSheet.create({
+container: {
+alignItems: "center",
+},
+stepContainer: {
+flexDirection: "row",
+alignItems: "center",
+justifyContent: "space-between",
+width: "80%",
+marginBottom: 20,
+},
+step: {
+width: 30,
+height: 30,
+borderRadius: 15,
+borderWidth: 2,
+borderColor: colors.themeColor,
+alignItems: "center",
+justifyContent: "center"
+},
+stepText: {
+color: colors.whiteColor,
+fontSize: wp(3),
+fontWeight: 'bold',
+},
+progressBar: {
+width: "80%",
+height: 10,
+backgroundColor: "#ddd",
+// borderColor:'black',
+// borderWidth:0.5,
+borderRadius: 5,
+overflow: "hidden",
+marginTop:wp(5)
+},
+
+progressBarActive: {
+height: "100%",
+backgroundColor: colors.themeColor,
+},
+});
+
+export default ProgressBar;
