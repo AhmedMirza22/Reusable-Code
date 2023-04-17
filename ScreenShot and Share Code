@@ -1,0 +1,208 @@
+import Share from 'react-native-share';
+import {captureRef} from 'react-native-view-shot';
+
+var RNFetchBlob = require('rn-fetch-blob').default;
+const PictureDir =
+  Platform.OS === 'android'
+    ? RNFetchBlob.fs.dirs.DownloadDir
+    : RNFetchBlob.fs.dirs.DocumentDir;
+
+const [value, setValue] = useState({
+    format: 'jpg',
+    quality: 0.9,
+  });
+
+  const viewRef = useRef();
+
+
+  useEffect(() => {
+    setTimeout(
+      () => {
+        takeScreenShot(true);
+      },
+    );
+
+
+  const takeScreenShot = async (isSharePress) => {
+    logs.log(isSharePress, 'asjhdgasjgd8u7e');
+    if (Platform.OS === 'ios') {
+      logs.log('inb ios ');
+      // info.plist permission has to be  added
+      // info.plist permission has to be  added
+      captureRef(viewRef, value)
+        .then((res) =>
+          value.result !== 'file'
+            ? res
+            : new Promise((success, failure) =>
+                // just a test to ensure res can be used in Image.getSize
+                Image.getSize(
+                  res,
+                  (width, height) => (console.log(res, 300, 300), success(res)),
+                  failure,
+                ),
+              ),
+        )
+        .then((res) => {
+          setError(null);
+          setRes(res);
+          setPreviewResource({uri: res});
+          let fileName =
+            globalAlertTransfer?.props?.paymentType === 'ThreePFT'
+              ? 'FundsTransfer'
+              : globalAlertTransfer?.props?.paymentType;
+          let time = moment(
+            globalAlertTransfer?.props?.currentTime,
+            'HH:mm:ss',
+          ).format('hmms');
+          let fullpath = `NBP-${fileName}-${globalAlertTransfer?.props?.currentDate}-${time}`;
+          let imageLocation = PictureDir + '/' + `NBP-${fullpath}.jpg`;
+          try {
+            RNFetchBlob.fs.writeFile(imageLocation, res, 'uri');
+            isSharePress ? SharePress(res) : DownloadPressIOS(imageLocation);
+          } catch (err) {
+            logs.log('oioioio', err);
+          }
+        })
+        .catch((error) => console.log('HERE', error));
+    } else {
+      logs.log('popii');
+      logs.log('Route Name', routeName);
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          {
+            title: 'NBP DIGITAL App Storage Permission',
+            message: 'NBP DIGITAL App needs access to your storage',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+        logs.log('here in first else ', granted);
+        // logs.log()
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          logs.log('here in first else of granted', granted);
+
+          captureRef(viewRef, value)
+            .then(
+              (res) =>
+                value.result !== 'file'
+                  ? res
+                  : new Promise((success, failure) =>
+                      // just a test to ensure res can be used in Image.getSize
+                      Image.getSize(
+                        res,
+                        (width, height) => (
+                          console.log(res, 300, 300), success(res)
+                        ),
+                        failure,
+                      ),
+                    ),
+
+              // logs.log('in then ')
+            )
+            .then((res) => {
+              logs.log('in then ');
+              setError(null);
+              setRes(res);
+              setPreviewResource({uri: res});
+              let fileName =
+                globalAlertTransfer?.props?.paymentType === 'ThreePFT'
+                  ? 'FundsTransfer'
+                  : globalAlertTransfer?.props?.paymentType;
+              let time = moment(
+                globalAlertTransfer?.props?.currentTime,
+                'HH:mm:ss',
+              ).format('hmms');
+              let fullpath = `NBP-${fileName}-${globalAlertTransfer?.props?.currentDate}-${time}`;
+              let imageLocation = PictureDir + '/' + `NBP-${fullpath}.jpg`;
+              try {
+                RNFetchBlob.fs.writeFile(imageLocation, res, 'uri');
+                const shareOptions = {
+                  title: 'Share QR Code',
+                  message: '',
+                  url: res,
+                  type: 'image/png',
+                };
+                if (routeName.routeName === 'download') {
+                  global.showToast.show(
+                    `Your Reciept has been saved in ${imageLocation}`,
+                    2000,
+                  );
+                }
+
+                // Share
+                routeName.routeName === 'download'
+                  ? globalAlertTransfer.navigation.dispatch(
+                      CommonActions.reset({
+                        index: 0,
+                        routes: [{name: 'Home'}],
+                      }),
+                    )
+                  : Share.open(shareOptions)
+                      .then((res) => {
+                        console.log(res);
+                        globalAlertTransfer.navigation.dispatch(
+                          CommonActions.reset({
+                            index: 0,
+                            routes: [{name: 'Home'}],
+                          }),
+                        );
+                      })
+                      .catch((err) => {
+                        globalAlertTransfer.navigation.dispatch(
+                          CommonActions.reset({
+                            index: 0,
+                            routes: [{name: 'Home'}],
+                          }),
+                        );
+                        err && logs.log('asdasdasdzzzzz', err);
+                      });
+              } catch (err) {
+                logs.log('asiiii', err);
+              }
+            })
+            .catch((error2) => logs.log('asdasd', error2));
+        } else {
+          // "Location permission denied"
+        }
+      } catch (err3) {
+        logs.log('---0', err3);
+      }
+    }
+  };
+
+
+        takeScreenShot(true);
+
+
+
+  const SharePress = (Resource) => {
+    logs.log('inSHrePress');
+    const shareOptions = {
+      title: 'Share QR Code',
+      message: '',
+      url: Resource,
+      type: 'image/png',
+    };
+    // Share
+    Share.open(shareOptions)
+      .then((res) => {
+        globalAlertTransfer.navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{name: 'Home'}],
+          }),
+        );
+        console.log('asdasd', res);
+      })
+      .catch((err) => {
+        globalAlertTransfer.navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{name: 'Home'}],
+          }),
+        );
+        err && console.log('paopdoapods', err);
+      });
+  };
